@@ -1,0 +1,177 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+#app{display:flex;height:620px;font-family:var(--font-sans);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;}
+#canvas-wrap{flex:1;display:flex;flex-direction:column;min-width:0;}
+.toolbar{padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:8px;align-items:center;background:var(--color-background-primary);flex-shrink:0;}
+.toolbar button{font-size:12px;padding:4px 12px;}
+.toolbar span{font-size:11px;color:var(--color-text-tertiary);}
+#canvas-area{flex:1;overflow:auto;position:relative;background:var(--color-background-tertiary);}
+#canvas-inner{position:relative;width:1400px;height:900px;}
+#svg-lines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+.ncard{position:absolute;width:172px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:10px 12px;cursor:pointer;}
+.ncard:hover{border-color:var(--color-border-secondary);}
+.ncard.sel{border:1.5px solid #378ADD;}
+.ncard.loading{opacity:0.55;}
+.ntitle{font-size:12px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;}
+.npreview{font-size:11px;color:var(--color-text-secondary);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px;}
+.nbtns{display:flex;gap:4px;margin-top:7px;}
+.nbtns button{font-size:11px;padding:2px 6px;flex:1;}
+#panel{width:290px;border-left:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;background:var(--color-background-primary);flex-shrink:0;}
+#ph{padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#pb{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+#pb textarea{width:100%;min-height:90px;font-size:12px;resize:vertical;padding:8px;border-radius:var(--border-radius-md);font-family:var(--font-sans);line-height:1.5;}
+.rbox{font-size:12px;line-height:1.6;color:var(--color-text-secondary);background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;white-space:pre-wrap;}
+.hint{font-size:11px;color:var(--color-text-tertiary);line-height:1.5;}
+.anc-chain{font-size:11px;color:var(--color-text-tertiary);border-left:2px solid var(--color-border-tertiary);padding-left:8px;line-height:1.5;}
+</style>
+
+<div id="app">
+  <div id="canvas-wrap">
+    <div class="toolbar">
+      <button onclick="addRoot()">+ new idea</button>
+      <span>click node to explore · fork to branch</span>
+    </div>
+    <div id="canvas-area">
+      <div id="canvas-inner">
+        <svg id="svg-lines"></svg>
+      </div>
+    </div>
+  </div>
+  <div id="panel">
+    <div id="ph">exploration</div>
+    <div id="pb"><div class="hint" style="margin-top:1rem;">select a node to start</div></div>
+  </div>
+</div>
+
+<script>
+const SYS = `You help physiotherapists explore clinical tool ideas related to ACL injury assessment and rehab using biometric or motion capture data. Be concise (2-4 sentences). Focus on practical, buildable tool concepts. Spark new directions with each response.`;
+
+let nodes = [], sel = null, ctr = 0;
+
+function uid(){ return 'n'+(++ctr); }
+
+function addRoot(){
+  const id = uid();
+  nodes.push({id, parentId:null, x:580, y:40, title:'new idea', prompt:'', response:'', loading:false});
+  draw(); select(id);
+}
+
+function fork(pid){
+  const parent = nodes.find(n=>n.id===pid);
+  if(!parent) return;
+  const id = uid();
+  nodes.push({id, parentId:pid, x:parent.x, y:parent.y+170, title:'variation', prompt:'', response:'', loading:false});
+  relayout(pid);
+  draw(); select(id);
+}
+
+function relayout(pid){
+  const parent = nodes.find(n=>n.id===pid);
+  const children = nodes.filter(n=>n.parentId===pid);
+  const gap = 200;
+  const total = (children.length-1)*gap;
+  children.forEach((c,i)=>{ c.x = parent.x - total/2 + i*gap; c.y = parent.y+170; });
+}
+
+function select(id){
+  sel = id; draw(); renderPanel();
+}
+
+function ancestors(id){
+  const res=[];
+  let cur = nodes.find(n=>n.id===id);
+  while(cur && cur.parentId){
+    const p = nodes.find(n=>n.id===cur.parentId);
+    if(p) res.unshift(p);
+    cur=p;
+  }
+  return res;
+}
+
+async function send(nodeId){
+  const node = nodes.find(n=>n.id===nodeId);
+  if(!node||!node.prompt.trim()) return;
+  node.loading=true;
+  node.title = node.prompt.slice(0,28)+(node.prompt.length>28?'…':'');
+  draw(); renderPanel();
+
+  const msgs=[];
+  ancestors(nodeId).forEach(a=>{
+    if(a.prompt) msgs.push({role:'user',content:a.prompt});
+    if(a.response) msgs.push({role:'assistant',content:a.response});
+  });
+  msgs.push({role:'user',content:node.prompt});
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYS,messages:msgs})
+    });
+    const d = await r.json();
+    node.response = d.content?.[0]?.text || JSON.stringify(d);
+  } catch(e){ node.response='error: '+e.message; }
+
+  node.loading=false; draw(); renderPanel();
+}
+
+function draw(){
+  const ci = document.getElementById('canvas-inner');
+  ci.querySelectorAll('.ncard').forEach(e=>e.remove());
+  const svg = document.getElementById('svg-lines');
+  svg.innerHTML='';
+
+  nodes.forEach(node=>{
+    if(node.parentId){
+      const p = nodes.find(n=>n.id===node.parentId);
+      if(p){
+        const x1=p.x+86, y1=p.y+112, x2=node.x+86, y2=node.y;
+        const my=(y1+y2)/2;
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',`M${x1} ${y1} C${x1} ${my},${x2} ${my},${x2} ${y2}`);
+        path.setAttribute('stroke','var(--color-border-secondary)');
+        path.setAttribute('stroke-width','1.5');
+        path.setAttribute('fill','none');
+        svg.appendChild(path);
+      }
+    }
+
+    const div=document.createElement('div');
+    div.className='ncard'+(node.id===sel?' sel':'')+(node.loading?' loading':'');
+    div.style.left=node.x+'px';
+    div.style.top=node.y+'px';
+    div.innerHTML=`<div class="ntitle">${esc(node.title)}</div>
+      <div class="npreview">${esc(node.response||node.prompt||'tap to explore…')}</div>
+      <div class="nbtns"><button onclick="event.stopPropagation();fork('${node.id}')">fork</button></div>`;
+    div.addEventListener('click',()=>select(node.id));
+    ci.appendChild(div);
+  });
+}
+
+function renderPanel(){
+  const ph=document.getElementById('ph');
+  const pb=document.getElementById('pb');
+  if(!sel){ ph.textContent='exploration'; pb.innerHTML='<div class="hint" style="margin-top:1rem;">select a node to start</div>'; return; }
+  const node=nodes.find(n=>n.id===sel);
+  if(!node) return;
+  ph.textContent=node.title;
+
+  const ancs=ancestors(sel);
+  const ancHtml = ancs.length ? `<div class="anc-chain">${ancs.map(a=>`<div>↑ ${esc(a.title)}</div>`).join('')}</div>` : '';
+
+  pb.innerHTML=`
+    ${ancHtml}
+    <textarea id="pinput" placeholder="describe a tool idea, a feature, or ask 'what if'…">${esc(node.prompt)}</textarea>
+    <button onclick="sendFromPanel()" style="width:100%;font-size:12px;">ask claude ↗</button>
+    ${node.loading?'<div class="rbox">thinking…</div>':''}
+    ${node.response&&!node.loading?`<div class="rbox">${esc(node.response)}</div>`:''}
+    ${!node.response&&!node.loading?'<div class="hint">send a message to start exploring this branch</div>':''}
+  `;
+  document.getElementById('pinput').addEventListener('input',e=>{ node.prompt=e.target.value; });
+}
+
+function sendFromPanel(){ if(sel) send(sel); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+addRoot();
+</script>
