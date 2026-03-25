@@ -269,7 +269,7 @@ export function NodeExpanded({ node }) {
           <textarea
             ref={textareaRef}
             className="ne-prompt"
-            placeholder="describe an app idea, or ask 'what if'…"
+            placeholder="What should this app do?"
             value={node.prompt}
             onChange={e => updatePrompt(node.id, e.target.value)}
             onKeyDown={handleKeyDown}
@@ -295,8 +295,8 @@ export function NodeExpanded({ node }) {
             </div>
           ) : (
             <div className="ne-sketch-actions">
-              <button className="ne-sketch-btn" onClick={() => sketchFileRef.current?.click()}>upload sketch</button>
-              <button className="ne-sketch-btn" onClick={() => setShowSketchPad(true)}>draw</button>
+              <button className="ne-sketch-btn" onClick={() => sketchFileRef.current?.click()}>Upload a sketch</button>
+              <button className="ne-sketch-btn" onClick={() => setShowSketchPad(true)}>Draw a sketch</button>
             </div>
           )}
           <input ref={sketchFileRef} type="file" accept="image/*" onChange={handleSketchUpload} hidden />
@@ -306,7 +306,7 @@ export function NodeExpanded({ node }) {
         {node.loading && (
           <div className="ne-loading">
             <div className="ne-loading-bar" />
-            <span className="ne-loading-text">generating prototype…</span>
+            <span className="ne-loading-text">Creating your preview…</span>
           </div>
         )}
 
@@ -324,7 +324,7 @@ export function NodeExpanded({ node }) {
           ) : !node.loading ? (
             <div className="ne-empty">
               <div className="ne-empty-icon">○</div>
-              <div>type a prompt above and press Enter</div>
+              <div>Describe what you want to see, then press the button</div>
             </div>
           ) : null}
         </div>
@@ -336,11 +336,11 @@ export function NodeExpanded({ node }) {
               className="ne-code"
               value={node.code}
               onChange={e => updateCode(node.id, e.target.value)}
-              placeholder="generated code appears here — or paste your own"
+              placeholder="Code behind the preview (advanced)"
               spellCheck={false}
             />
             <div className="ne-code-actions">
-              <button className="ne-send" onClick={rerun}>Re-run</button>
+              <button className="ne-send" onClick={rerun}>Refresh preview</button>
             </div>
           </div>
         )}

@@ -7,6 +7,8 @@ export async function sendOllama(messages, systemPrompt, model, baseUrl, callbac
   // Normalize base URL: strip trailing slash, append API path
   const url = baseUrl.replace(/\/+$/, '') + '/v1/chat/completions';
 
+  console.log('[Ollama] POST', url, '| model:', model);
+
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -15,10 +17,14 @@ export async function sendOllama(messages, systemPrompt, model, baseUrl, callbac
     });
 
     if (!res.ok) {
-      callbacks.onError(`Ollama error ${res.status}: ${await res.text()}`);
+      const body = await res.text();
+      const msg = `Ollama error ${res.status}: ${body}`;
+      console.error('[Ollama]', msg);
+      callbacks.onError(msg);
       return;
     }
 
+    console.log('[Ollama] connected, streaming...');
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
@@ -51,8 +57,11 @@ export async function sendOllama(messages, systemPrompt, model, baseUrl, callbac
     }
     if (buf.trim()) processLines(buf);
 
+    console.log('[Ollama] done');
     callbacks.onDone();
   } catch (e) {
-    callbacks.onError(`Cannot reach Ollama at ${baseUrl} — is it running? (${e.message})`);
+    const msg = `Cannot reach Ollama at ${url} — is it running? (${e.message})`;
+    console.error('[Ollama]', msg);
+    callbacks.onError(msg);
   }
 }

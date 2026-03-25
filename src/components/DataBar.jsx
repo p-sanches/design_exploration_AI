@@ -87,7 +87,7 @@ export function DataBar() {
   return (
     <div className="data-bar">
       <div className="data-bar-left">
-        <span className="data-bar-title">Data source</span>
+        <span className="data-bar-title">Connect data</span>
         <button
           className={dataSource === 'csv' ? 'active' : ''}
           onClick={() => handleSourceChange('csv')}
@@ -104,7 +104,7 @@ export function DataBar() {
           className={dataSource === 'bluetooth' ? 'active' : ''}
           onClick={() => handleSourceChange('bluetooth')}
         >
-          Connect sensor
+          Sensor
         </button>
         {dataSource !== 'none' && (
           <button className="stop-btn" onClick={() => { stopAll(); setDataSource('none'); }}>
@@ -119,7 +119,7 @@ export function DataBar() {
             <button className="model-pill-x" onClick={() => removeModel(m.id)}>&times;</button>
           </span>
         ))}
-        <button className="model-add-btn" onClick={() => setShowModelUpload(true)}>+ model</button>
+        <button className="model-add-btn" onClick={() => setShowModelUpload(true)}>Add model</button>
       </div>
       <div className="data-bar-right">
         {dataFlowing && (

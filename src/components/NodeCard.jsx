@@ -16,6 +16,7 @@ export function NodeCard({ node, selected, scale }) {
   const onPointerDown = useCallback((e) => {
     const tag = e.target.tagName;
     if (tag === 'BUTTON' || tag === 'SELECT' || tag === 'SPAN') return;
+    if (e.target.closest('.node-add-handle')) return;
     e.stopPropagation();
     movedRef.current = false;
     dragRef.current = { startX: e.clientX, startY: e.clientY, nodeX: node.x, nodeY: node.y };
@@ -44,7 +45,7 @@ export function NodeCard({ node, selected, scale }) {
   }, [node.id, stage, setStage]);
 
   const hasCode = !!node.code;
-  const preview = node.prompt || 'tap to explore…';
+  const preview = node.prompt || 'Describe your idea\u2026';
 
   return (
     <div
@@ -53,7 +54,7 @@ export function NodeCard({ node, selected, scale }) {
         left: node.x,
         top: node.y,
         borderLeftColor: stageInfo.border,
-        borderLeftWidth: 3,
+        borderLeftWidth: 4,
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -62,12 +63,17 @@ export function NodeCard({ node, selected, scale }) {
       <div className="node-title">{node.title}</div>
       <div className="node-preview">{preview}</div>
       <div className="node-actions">
-        <span className={`stage-badge stage-${stage}`} onClick={cycleStage} title="click to change stage">
+        <span className={`stage-badge stage-${stage}`} onClick={cycleStage} title="Tap to change stage">
           {stageInfo.label}
         </span>
-        {hasCode && <span className="code-badge">prototype</span>}
-        <button onClick={e => { e.stopPropagation(); fork(node.id); }}>fork</button>
+        {hasCode && <span className="code-badge">preview</span>}
         <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteNode(node.id); }}>×</button>
+      </div>
+      <div className="node-add-handle" onClick={e => { e.stopPropagation(); fork(node.id); }}>
+        <svg className="node-add-stem" width="2" height="16" viewBox="0 0 2 16">
+          <line x1="1" y1="0" x2="1" y2="16" stroke="var(--border)" strokeWidth="1.5" strokeDasharray="3 3" />
+        </svg>
+        <div className="node-add-circle">+</div>
       </div>
     </div>
   );

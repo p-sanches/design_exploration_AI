@@ -51,7 +51,7 @@ export function ModelUpload({ onClose }) {
     <div className="model-upload-overlay" onClick={onClose}>
       <div className="model-upload-modal" onClick={e => e.stopPropagation()}>
         <div className="model-upload-header">
-          <span>Upload ML model</span>
+          <span>Add a model</span>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
 

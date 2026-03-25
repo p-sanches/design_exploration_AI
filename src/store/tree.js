@@ -81,9 +81,9 @@ function getSystemPrompt(stage) {
 }
 
 export const STAGES = {
-  sketch:  { bg: '#FEF3C7', border: '#D97706', label: 'sketch' },
-  explore: { bg: '#E0E7FF', border: '#4F46E5', label: 'explore' },
-  refine:  { bg: '#D1FAE5', border: '#059669', label: 'refine' },
+  sketch:  { bg: '#FEF3C7', border: '#E0A030', label: 'Sketch' },
+  explore: { bg: '#EDE5FF', border: '#7C5CFC', label: 'Explore' },
+  refine:  { bg: '#D1FAE5', border: '#059669', label: 'Refine' },
 };
 
 export const STAGE_LIST = ['sketch', 'explore', 'refine'];
@@ -176,8 +176,8 @@ export const useTreeStore = create((set, get) => ({
 
   // Provider
   provider: 'anthropic',
-  ollamaModel: 'llama3.1',
-  ollamaUrl: 'https://tokai.informatik.umu.se',
+  ollamaModel: 'qwen3-coder:latest',
+  ollamaUrl: '/ollama-api',
 
   // ML models (metadata only — binary data lives in IndexedDB)
   models: [],  // { id, name, format, inputDescription, outputLabels, sizeBytes }
@@ -218,7 +218,7 @@ export const useTreeStore = create((set, get) => ({
       nodes: [...s.nodes, {
         id, parentId: null,
         x: 200 + roots.length * 280, y: 60,
-        title: 'new idea', prompt: '', response: '', code: '', sketch: null,
+        title: 'New idea', prompt: '', response: '', code: '', sketch: null,
         loading: false, stage: 'sketch',
       }],
       selectedId: id,
@@ -234,8 +234,8 @@ export const useTreeStore = create((set, get) => ({
     set(s => ({
       nodes: [...s.nodes, {
         id, parentId,
-        x: parent.x + offset, y: parent.y + 200,
-        title: 'variation', prompt: '', response: '', code: parent.code || '', sketch: parent.sketch || null,
+        x: parent.x + offset, y: parent.y + 240,
+        title: 'What if…', prompt: '', response: '', code: parent.code || '', sketch: parent.sketch || null,
         loading: false, stage: parent.stage || 'sketch',
       }],
       selectedId: id,
@@ -393,8 +393,8 @@ export const useTreeStore = create((set, get) => ({
         nodes: data.nodes.map(n => ({ ...n, loading: false, code: n.code || '' })),
         selectedId: null,
         provider: data.provider || 'anthropic',
-        ollamaModel: data.ollamaModel || 'llama3.1',
-        ollamaUrl: data.ollamaUrl || 'https://tokai.informatik.umu.se',
+        ollamaModel: data.ollamaModel || 'qwen3-coder:latest',
+        ollamaUrl: data.ollamaUrl || 'http://tokai.informatik.umu.se:11434',
         models: data.models || [],
       });
     } catch (e) {

@@ -75,12 +75,12 @@ export function Toolbar() {
   return (
     <div className="toolbar">
       <div className="toolbar-left">
-        <button onClick={addRoot}>+ new idea</button>
-        <button onClick={handleSave} disabled={!nodes.length}>save</button>
-        <button onClick={handleLoad}>load</button>
-        <button onClick={handleExport} disabled={!nodes.length}>export</button>
+        <button onClick={addRoot}>+ New idea</button>
+        <button onClick={handleSave} disabled={!nodes.length}>Save</button>
+        <button onClick={handleLoad}>Open</button>
+        <button onClick={handleExport} disabled={!nodes.length}>Share</button>
         <input ref={fileRef} type="file" accept=".json" onChange={handleFile} hidden />
-        <span className="toolbar-hint">drag nodes · scroll to zoom</span>
+        <span className="toolbar-hint">Drag to move · scroll to zoom</span>
       </div>
       <ModelToggle />
     </div>

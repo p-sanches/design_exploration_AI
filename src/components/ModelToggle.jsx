@@ -17,12 +17,12 @@ export function ModelToggle() {
   const toggle = () => setProvider(provider === 'anthropic' ? 'ollama' : 'anthropic');
 
   const submitModel = () => {
-    setOllamaModel(modelInput.trim() || 'llama3.1');
+    setOllamaModel(modelInput.trim() || 'qwen3-coder:latest');
     setEditingModel(false);
   };
 
   const submitUrl = () => {
-    setOllamaUrl(urlInput.trim() || 'https://tokai.informatik.umu.se');
+    setOllamaUrl(urlInput.trim() || '/ollama-api');
     setEditingUrl(false);
   };
 
@@ -35,9 +35,12 @@ export function ModelToggle() {
         <span className={provider === 'anthropic' ? 'active' : ''}>Claude</span>
         <span className={provider === 'ollama' ? 'active' : ''}>Ollama</span>
       </div>
-      {provider === 'anthropic' && <span className="model-label">claude-sonnet</span>}
+      {provider === 'anthropic' && (
+        <span className="model-active-badge">claude-sonnet</span>
+      )}
       {provider === 'ollama' && (
-        <>
+        <div className="ollama-config">
+          <span className="ollama-config-label">model:</span>
           {editingModel ? (
             <input
               className="model-input"
@@ -49,10 +52,11 @@ export function ModelToggle() {
               placeholder="model name"
             />
           ) : (
-            <span className="model-label clickable" onClick={() => { setModelInput(ollamaModel); setEditingModel(true); }}>
+            <span className="model-active-badge clickable" onClick={() => { setModelInput(ollamaModel); setEditingModel(true); }}>
               {ollamaModel}
             </span>
           )}
+          <span className="ollama-config-label">@</span>
           {editingUrl ? (
             <input
               className="model-input url-input"
@@ -61,14 +65,14 @@ export function ModelToggle() {
               onBlur={submitUrl}
               onKeyDown={e => e.key === 'Enter' && submitUrl()}
               autoFocus
-              placeholder="https://..."
+              placeholder="server url"
             />
           ) : (
-            <span className="model-label clickable url-label" onClick={() => { setUrlInput(ollamaUrl); setEditingUrl(true); }} title={ollamaUrl}>
+            <span className="ollama-url-badge clickable" onClick={() => { setUrlInput(ollamaUrl); setEditingUrl(true); }} title={ollamaUrl}>
               {shortUrl}
             </span>
           )}
-        </>
+        </div>
       )}
     </div>
   );
