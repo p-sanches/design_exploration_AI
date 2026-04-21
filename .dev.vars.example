@@ -1,0 +1,12 @@
+# Copy this file to .dev.vars and fill in values.
+# .dev.vars is read by `wrangler pages dev` for local Pages Functions.
+# It is git-ignored. Do NOT commit it.
+
+ANTHROPIC_KEY=sk-ant-...
+
+# Optional: if set, the /api/claude proxy rejects requests without a matching
+# X-Workshop-Code header. Leave blank to disable the gate locally.
+WORKSHOP_CODE=
+
+# Optional: enables /api/ollama/* proxy. Set to your Ollama server URL.
+OLLAMA_URL=http://tokai.informatik.umu.se:11434

@@ -29,48 +29,48 @@ Keep all code in a single HTML file. Keep code concise to avoid truncation.`;
 
 // Progressive fidelity prompts — depth determines the design stage
 const STAGE_PROMPTS = {
-  sketch: `You are helping physiotherapists and occupational therapists explore clinical app ideas in the EARLY SKETCHING stage.
+  sketch: `You are helping designers and researchers explore ideas for interactive applications that use live body data, sensor data, or self-tracked data. This is the EARLY SKETCHING stage.
 
 ${DATA_HOOK}
 
 YOUR ROLE AT THIS STAGE: Build a raw, minimal data probe. This is NOT an app yet — it is a sketch to see if the idea has legs.
 
 Rules for this stage:
-- Show the raw incoming data visually: print joint names, coordinates, confidence values directly on screen
+- Show the raw incoming data visually: print values, labels, and coordinates directly on screen
 - Use a plain white background with black monospace text — no gradients, no rounded corners, no colour themes
 - Add a visible data status line: "frames received: N" counter, timestamp of last frame, data source name
-- If data stops arriving or joints are missing, show that clearly (e.g. "left_knee: NO DATA")
+- If data stops arriving or values are missing, show that clearly (e.g. "sensor_x: NO DATA")
 - Show the ONE core calculation or visualisation the user asked about, in the simplest possible way
 - Label everything explicitly — the user should understand what every number on screen means
 - Keep the code under 80 lines if possible
 - No polish. No branding. No icons. Think "developer console meets whiteboard sketch"`,
 
-  explore: `You are helping physiotherapists and occupational therapists refine a clinical app idea. This is the EXPLORATION stage — the idea has been sketched and now we are testing variations.
+  explore: `You are helping designers and researchers refine an interactive application idea. This is the EXPLORATION stage — the idea has been sketched and now we are testing variations.
 
 ${DATA_HOOK}
 
-YOUR ROLE AT THIS STAGE: Build a functional prototype that tests a specific design direction. The previous sketch proved the data works — now shape it into something a patient might recognise.
+YOUR ROLE AT THIS STAGE: Build a functional prototype that tests a specific design direction. The previous sketch proved the data works — now shape it into something a user might recognise.
 
 Rules for this stage:
 - Still show a small data status indicator (dot + frame count) but it can be subtle, e.g. a small line at the bottom
 - Add basic layout structure: a clear heading, a main content area, maybe a secondary info area
 - Use simple colours to convey meaning (green=good, amber=caution, red=alert) but keep the palette minimal
 - The core interaction or feedback loop should be clear and working
-- Keep some transparency into what the data is doing — e.g. show the key angles or values that drive the UI
+- Keep some transparency into what the data is doing — e.g. show the key values that drive the UI
 - Typography and spacing should be clean but don't over-design
 - It's OK to look like a wireframe with real data running through it`,
 
-  refine: `You are helping physiotherapists and occupational therapists polish a clinical app concept. This is the REFINEMENT stage — the idea and interaction pattern are established.
+  refine: `You are helping designers and researchers polish an interactive application concept. This is the REFINEMENT stage — the idea and interaction pattern are established.
 
 ${DATA_HOOK}
 
-YOUR ROLE AT THIS STAGE: Build a near-final prototype that feels like a real patient-facing app.
+YOUR ROLE AT THIS STAGE: Build a near-final prototype that feels like a real end-user-facing app.
 
 Rules for this stage:
 - No debug info visible by default (OK to keep it behind a tap/toggle)
 - Full visual design: colour palette, typography hierarchy, rounded corners, shadows, spacing
 - Smooth transitions and animations where they aid comprehension (e.g. animating a gauge)
-- The UI should be understandable by a patient without explanation
+- The UI should be understandable by an end user without explanation
 - Consider mobile-first layout (max-width ~400px centered)
 - Add contextual feedback: encouragement, warnings, tips — not just raw numbers
 - Handle edge cases gracefully: missing data, low confidence, person leaving frame`,
@@ -88,7 +88,7 @@ export const STAGES = {
 
 export const STAGE_LIST = ['sketch', 'explore', 'refine'];
 
-function getDataSourceContext(source, csvColumns) {
+function getDataSourceContext(source, csvColumns, sensorName, sensorParserType, sensorDecoderDescription) {
   if (source === 'mediapipe') {
     return 'The user has a LIVE WEBCAM connected via MediaPipe Pose. Real-time skeleton data is streaming now. The bioframe.joints object contains 33 named landmarks including: nose, left_shoulder, right_shoulder, left_elbow, right_elbow, left_wrist, right_wrist, left_hip, right_hip, left_knee, right_knee, left_ankle, right_ankle, left_heel, right_heel, left_foot_index, right_foot_index. Each joint has {x, y, z, confidence} where x/y are 0-1 normalized screen coordinates. The data is already flowing — generate code that uses it immediately, do not show a "waiting" state. IMPORTANT: confidence values fluctuate — use a low threshold like 0.3 or skip the confidence check entirely. Do not filter out frames aggressively.';
   }
@@ -105,7 +105,23 @@ Use frame.row.ColumnName to access data. Column names are EXACTLY as listed abov
 Do NOT use frame.joints for CSV data — use frame.row directly.`;
   }
   if (source === 'bluetooth') {
-    return 'A Bluetooth sensor is connected and streaming. bioframe.joints.sensor has {x, y, z, confidence} and bioframe.raw.values has the raw sensor array. The data is already flowing — generate code that uses it immediately.';
+    const tag = sensorName || 'sensor';
+    const ptype = sensorParserType || 'int16';
+    const describe = {
+      heart_rate: `bioframe.raw.values is [heartRateBpm] — a single integer beats-per-minute value. Use bioframe.raw.values[0].`,
+      int16: `bioframe.raw.values is an array of signed 16-bit integers decoded from the BLE packet.`,
+      uint16: `bioframe.raw.values is an array of unsigned 16-bit integers decoded from the BLE packet.`,
+      float32: `bioframe.raw.values is an array of 32-bit floats decoded from the BLE packet.`,
+      raw: `bioframe.raw.values is an array of raw bytes (0-255) — interpret according to your sensor's protocol.`,
+      ai: `bioframe.raw.values is produced by a custom decoder inferred by AI. ${sensorDecoderDescription || ''}`.trim(),
+    }[ptype] || '';
+    return `A Bluetooth sensor called "${tag}" is connected and streaming (decoded as ${ptype}).
+- bioframe.source === 'bluetooth'
+- bioframe.sensorName === '${tag}'
+- ${describe}
+- bioframe.raw.bytes — raw byte array, if you need to decode differently
+- bioframe.raw.parserType === '${ptype}'
+The data is already flowing — generate code that uses it immediately.`;
   }
   return null;
 }
@@ -177,7 +193,7 @@ export const useTreeStore = create((set, get) => ({
   // Provider
   provider: 'anthropic',
   ollamaModel: 'qwen3-coder:latest',
-  ollamaUrl: '/ollama-api',
+  ollamaUrl: '/api/ollama',
 
   // ML models (metadata only — binary data lives in IndexedDB)
   models: [],  // { id, name, format, inputDescription, outputLabels, sizeBytes }
@@ -187,12 +203,18 @@ export const useTreeStore = create((set, get) => ({
   dataFlowing: false,
   frameCount: 0,
   csvColumns: [],
+  sensorName: '',  // friendly name of the committed BLE characteristic, e.g. 'HR'
+  sensorParserType: '', // 'heart_rate' | 'int16' | 'uint16' | 'float32' | 'raw' | 'ai'
+  sensorDecoderDescription: '', // AI-supplied one-liner when parserType is 'ai'
 
   // Data layer actions
-  setDataSource: (source) => set({ dataSource: source, dataFlowing: false, frameCount: 0, csvColumns: [] }),
+  setDataSource: (source) => set({ dataSource: source, dataFlowing: false, frameCount: 0, csvColumns: [], sensorName: '', sensorParserType: '', sensorDecoderDescription: '' }),
   setDataFlowing: (flowing) => set({ dataFlowing: flowing }),
   incrementFrame: () => set(s => ({ frameCount: s.frameCount + 1 })),
   setCsvColumns: (cols) => set({ csvColumns: cols }),
+  setSensorName: (name) => set({ sensorName: name }),
+  setSensorParserType: (t) => set({ sensorParserType: t }),
+  setSensorDecoderDescription: (d) => set({ sensorDecoderDescription: d }),
 
   // Model actions
   addModel: async (file, name, format, inputDescription, outputLabels) => {
@@ -291,10 +313,13 @@ export const useTreeStore = create((set, get) => ({
     return result;
   },
 
-  sendMessage: async (nodeId) => {
+  sendMessage: async (nodeId, options = {}) => {
     const state = get();
     const node = state.nodes.find(n => n.id === nodeId);
     if (!node || !node.prompt.trim()) return;
+
+    // Capture previous response before clearing (needed for question→answer flow)
+    const previousResponse = node.response;
 
     const title = node.prompt.slice(0, 32) + (node.prompt.length > 32 ? '…' : '');
     set(s => ({
@@ -311,13 +336,32 @@ export const useTreeStore = create((set, get) => ({
       if (a.response) m.push({ role: 'assistant', content: a.response });
       return m;
     });
+
+    // If this node had a previous exchange (e.g. question mode → user answering),
+    // include it in the conversation so the AI sees its own questions + the user's answers
+    if (previousResponse && !options.questionMode) {
+      // The previous prompt was already used; include it as context
+      const prevPrompt = node.prompt; // current prompt is the user's answer
+      // We need the *original* prompt that triggered the questions — but it was overwritten.
+      // Instead, just include the AI's previous response as assistant context.
+      messages.push({ role: 'assistant', content: previousResponse });
+    }
     // Tell the AI which data source is active so it generates relevant code
-    const dataContext = getDataSourceContext(state.dataSource, state.csvColumns);
+    const dataContext = getDataSourceContext(state.dataSource, state.csvColumns, state.sensorName, state.sensorParserType, state.sensorDecoderDescription);
     const modelContext = getModelContext(state.models);
     const contextParts = [`[Stage: ${stage.toUpperCase()}]`];
     if (dataContext) contextParts.push(dataContext);
     if (modelContext) contextParts.push(modelContext);
-    const userText = `${node.prompt}\n\n[${contextParts.join(' | ')}]`;
+    let userText = `${node.prompt}\n\n[${contextParts.join(' | ')}]`;
+
+    // Question mode: ask clarifying questions instead of generating code
+    if (options.questionMode) {
+      userText = 'Before generating any code, ask me 2-3 short clarifying questions about this idea. Do NOT generate HTML or code yet — just ask questions to better understand what I want. Be specific and practical.\n\n' + userText;
+    }
+    // Extra instruction: appended for variation guidance etc.
+    if (options.extraInstruction) {
+      userText += '\n\n' + options.extraInstruction;
+    }
 
     // Build the user message — include sketch image if present
     if (node.sketch && state.provider === 'anthropic') {
@@ -353,15 +397,15 @@ export const useTreeStore = create((set, get) => ({
         }));
       },
       onDone: () => {
-        // Extract code from the node's own response (built by onToken, guaranteed complete)
         const currentNode = get().nodes.find(n => n.id === nodeId);
-        const extracted = extractCode(currentNode?.response || '');
+        const extracted = options.questionMode ? null : extractCode(currentNode?.response || '');
         set(s => ({
           nodes: s.nodes.map(n =>
             n.id === nodeId ? {
               ...n,
               loading: false,
               code: extracted || n.code,
+              // In question mode, keep the prompt so context is preserved
             } : n
           ),
         }));
@@ -374,6 +418,107 @@ export const useTreeStore = create((set, get) => ({
         }));
       },
     });
+  },
+
+  // "What else?" — fork with a reframe prompt and send immediately
+  whatElse: async (nodeId) => {
+    const state = get();
+    const node = state.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const id = uid();
+    const siblings = state.nodes.filter(n => n.parentId === nodeId);
+    const offset = (siblings.length - siblings.length / 2) * 240;
+
+    const reframePrompt = 'The current prototype works, but I want to explore a completely different approach to the same problem. Try a different visualization, different interaction pattern, or different metaphor. Surprise me with something I would not have thought of.';
+
+    set(s => ({
+      nodes: [...s.nodes, {
+        id, parentId: nodeId,
+        x: node.x + offset, y: node.y + 240,
+        title: 'What else…',
+        prompt: reframePrompt, response: '', code: '', sketch: null,
+        loading: false, stage: node.stage || 'sketch',
+      }],
+      selectedId: id,
+    }));
+
+    await get().sendMessage(id);
+  },
+
+  // "Keep/Change" — structured prompt to refine a prototype
+  sendKeepChange: async (nodeId, keepText, changeText) => {
+    const state = get();
+    const node = state.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const id = uid();
+    const siblings = state.nodes.filter(n => n.parentId === nodeId);
+    const offset = (siblings.length - siblings.length / 2) * 240;
+
+    const parts = [];
+    if (keepText.trim()) parts.push(`KEEP these aspects exactly as they are: ${keepText.trim()}`);
+    if (changeText.trim()) parts.push(`CHANGE these aspects: ${changeText.trim()}`);
+    const prompt = parts.join('. ') + '. Generate an updated version of the current prototype.';
+
+    set(s => ({
+      nodes: [...s.nodes, {
+        id, parentId: nodeId,
+        x: node.x + offset, y: node.y + 240,
+        title: 'Refine: ' + (changeText || keepText).slice(0, 24),
+        prompt, response: '', code: '', sketch: null,
+        loading: false, stage: node.stage || 'sketch',
+      }],
+      selectedId: id,
+    }));
+
+    await get().sendMessage(id);
+  },
+
+  // Multi-generate — create 3 variations simultaneously
+  multiGenerate: async (nodeId) => {
+    const node = get().nodes.find(n => n.id === nodeId);
+    if (!node || !node.prompt.trim()) return;
+
+    const prompt = node.prompt;
+    const variations = [
+      '[Design variation: Focus on simplicity — minimal UI, fewest visual elements possible.]',
+      '[Design variation: Focus on richness — use color, animation, and graphical elements generously.]',
+      '[Design variation: Try an unconventional approach — unexpected metaphor, interaction pattern, or visualization.]',
+    ];
+
+    // Create 2 sibling nodes (same parent as this node)
+    const id2 = uid();
+    const id3 = uid();
+    const newNodes = [
+      {
+        id: id2, parentId: node.parentId,
+        x: node.x + 260, y: node.y,
+        title: 'Variation 2', prompt,
+        response: '', code: '',
+        sketch: node.sketch || null,
+        loading: false, stage: node.stage || 'sketch',
+      },
+      {
+        id: id3, parentId: node.parentId,
+        x: node.x + 520, y: node.y,
+        title: 'Variation 3', prompt,
+        response: '', code: '',
+        sketch: node.sketch || null,
+        loading: false, stage: node.stage || 'sketch',
+      },
+    ];
+
+    set(s => ({ nodes: [...s.nodes, ...newNodes] }));
+
+    // Send all 3 concurrently with different variation instructions
+    console.log('[MultiGenerate] Sending 3 variations:', nodeId, id2, id3);
+    const send = get().sendMessage;
+    await Promise.all([
+      send(nodeId, { extraInstruction: variations[0] }),
+      send(id2, { extraInstruction: variations[1] }),
+      send(id3, { extraInstruction: variations[2] }),
+    ]);
   },
 
   setProvider: (provider) => set({ provider }),
@@ -394,7 +539,7 @@ export const useTreeStore = create((set, get) => ({
         selectedId: null,
         provider: data.provider || 'anthropic',
         ollamaModel: data.ollamaModel || 'qwen3-coder:latest',
-        ollamaUrl: data.ollamaUrl || 'http://tokai.informatik.umu.se:11434',
+        ollamaUrl: data.ollamaUrl || '/api/ollama',
         models: data.models || [],
       });
     } catch (e) {

@@ -3,22 +3,28 @@ import { useTreeStore } from '../store/tree.js';
 import { startBroadcast, stopBroadcast } from '../datalayer/broadcast.js';
 import { startCSV, stopCSV } from '../datalayer/csv.js';
 import { startMediaPipe, stopMediaPipe } from '../datalayer/mediapipe.js';
-import { startBluetooth, stopBluetooth } from '../datalayer/bluetooth.js';
+import { stopBluetooth } from '../datalayer/bluetooth.js';
 import { ModelUpload } from './ModelUpload.jsx';
+import { SensorPicker } from './SensorPicker.jsx';
 
 export function DataBar() {
   const [webcamReady, setWebcamReady] = useState(false);
   const [showModelUpload, setShowModelUpload] = useState(false);
+  const [showSensorPicker, setShowSensorPicker] = useState(false);
   const models = useTreeStore(s => s.models);
   const removeModel = useTreeStore(s => s.removeModel);
   const dataSource = useTreeStore(s => s.dataSource);
   const dataFlowing = useTreeStore(s => s.dataFlowing);
   const frameCount = useTreeStore(s => s.frameCount);
   const csvColumns = useTreeStore(s => s.csvColumns);
+  const sensorName = useTreeStore(s => s.sensorName);
   const setDataSource = useTreeStore(s => s.setDataSource);
   const setDataFlowing = useTreeStore(s => s.setDataFlowing);
   const incrementFrame = useTreeStore(s => s.incrementFrame);
   const setCsvColumns = useTreeStore(s => s.setCsvColumns);
+  const setSensorName = useTreeStore(s => s.setSensorName);
+  const setSensorParserType = useTreeStore(s => s.setSensorParserType);
+  const setSensorDecoderDescription = useTreeStore(s => s.setSensorDecoderDescription);
 
   const fileRef = useRef(null);
   const videoRef = useRef(null);
@@ -53,16 +59,23 @@ export function DataBar() {
       };
       waitForRef();
     } else if (source === 'bluetooth') {
-      startBluetooth()
-        .then(() => {
-          startBroadcast(() => {
-            incrementFrame();
-          });
-          setDataFlowing(true);
-        })
-        .catch(e => console.error('Bluetooth error:', e));
+      setShowSensorPicker(true);
     }
-  }, [stopAll, setDataSource, setDataFlowing, incrementFrame]);
+  }, [stopAll, setDataSource]);
+
+  const handleSensorCommit = useCallback((info) => {
+    setShowSensorPicker(false);
+    setSensorName(info.friendlyName);
+    setSensorParserType(info.parserType);
+    setSensorDecoderDescription(info.decoderDescription || '');
+    startBroadcast(() => { incrementFrame(); });
+    setDataFlowing(true);
+  }, [setSensorName, setSensorParserType, setSensorDecoderDescription, setDataFlowing, incrementFrame]);
+
+  const handleSensorCancel = useCallback(() => {
+    setShowSensorPicker(false);
+    setDataSource('none');
+  }, [setDataSource]);
 
   const handleCSVFile = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -133,12 +146,23 @@ export function DataBar() {
             {csvColumns.length} columns
           </span>
         )}
+        {dataSource === 'bluetooth' && sensorName && (
+          <span className="csv-cols" title="Friendly name of the connected BLE characteristic">
+            {sensorName}
+          </span>
+        )}
       </div>
       <input ref={fileRef} type="file" accept=".csv" onChange={handleCSVFile} hidden />
       {dataSource === 'mediapipe' && (
         <video ref={videoRef} className="webcam-preview" autoPlay playsInline muted style={{ display: webcamReady ? 'block' : 'none' }} />
       )}
       {showModelUpload && <ModelUpload onClose={() => setShowModelUpload(false)} />}
+      {showSensorPicker && (
+        <SensorPicker
+          onCommit={handleSensorCommit}
+          onCancel={handleSensorCancel}
+        />
+      )}
     </div>
   );
 }

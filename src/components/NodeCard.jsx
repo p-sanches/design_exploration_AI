@@ -67,7 +67,7 @@ export function NodeCard({ node, selected, scale }) {
           {stageInfo.label}
         </span>
         {hasCode && <span className="code-badge">preview</span>}
-        <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteNode(node.id); }}>×</button>
+        <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteNode(node.id); }}>Delete</button>
       </div>
       <div className="node-add-handle" onClick={e => { e.stopPropagation(); fork(node.id); }}>
         <svg className="node-add-stem" width="2" height="16" viewBox="0 0 2 16">

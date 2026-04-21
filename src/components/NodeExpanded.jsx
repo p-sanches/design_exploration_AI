@@ -71,6 +71,12 @@ function injectScripts(code) {
   return html;
 }
 
+// Check if a response contains a code block (used to decide whether to show response as text)
+function responseHasCode(response) {
+  if (!response) return false;
+  return response.includes('```') || response.trim().startsWith('<!DOCTYPE') || response.trim().startsWith('<html');
+}
+
 export function NodeExpanded({ node }) {
   const select = useTreeStore(s => s.select);
   const sendMsg = useTreeStore(s => s.sendMessage);
@@ -78,6 +84,9 @@ export function NodeExpanded({ node }) {
   const updateCode = useTreeStore(s => s.updateCode);
   const updateSketch = useTreeStore(s => s.updateSketch);
   const getAncestors = useTreeStore(s => s.getAncestors);
+  const whatElse = useTreeStore(s => s.whatElse);
+  const sendKeepChange = useTreeStore(s => s.sendKeepChange);
+  const multiGenerate = useTreeStore(s => s.multiGenerate);
 
   const textareaRef = useRef(null);
   const iframeRef = useRef(null);
@@ -85,6 +94,9 @@ export function NodeExpanded({ node }) {
   const [iframeError, setIframeError] = useState(null);
   const [maximized, setMaximized] = useState(false);
   const [showSketchPad, setShowSketchPad] = useState(false);
+  const [showKeepChange, setShowKeepChange] = useState(false);
+  const [keepText, setKeepText] = useState('');
+  const [changeText, setChangeText] = useState('');
   const sketchFileRef = useRef(null);
   const [size, setSize] = useState({ w: 420, h: 500 });
   const resizing = useRef(null);
@@ -151,6 +163,13 @@ export function NodeExpanded({ node }) {
     setIframeError(null);
   }, [node.code]);
 
+  // Reset keep/change panel when switching nodes
+  useEffect(() => {
+    setShowKeepChange(false);
+    setKeepText('');
+    setChangeText('');
+  }, [node.id]);
+
   // Manual re-run: force iframe reload by briefly clearing and re-setting srcdoc
   const rerun = useCallback(() => {
     if (!iframeRef.current || !iframeHtml) return;
@@ -202,6 +221,29 @@ export function NodeExpanded({ node }) {
     }
   };
 
+  const handleAskQuestions = () => {
+    if (node.prompt.trim()) {
+      setShowCode(false);
+      sendMsg(node.id, { questionMode: true });
+    }
+  };
+
+  const handleExplore = () => {
+    if (node.prompt.trim()) {
+      setShowCode(false);
+      multiGenerate(node.id);
+    }
+  };
+
+  const handleKeepChangeSubmit = () => {
+    if (keepText.trim() || changeText.trim()) {
+      sendKeepChange(node.id, keepText, changeText);
+      setKeepText('');
+      setChangeText('');
+      setShowKeepChange(false);
+    }
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
@@ -222,6 +264,9 @@ export function NodeExpanded({ node }) {
         borderLeftColor: stageInfo.border,
       };
 
+  // Should we show the response as text (no code was generated)?
+  const showResponseText = node.response && !node.loading && !responseHasCode(node.response);
+
   return (
     <div
       className={`node-expanded${maximized ? ' ne-maximized' : ''}`}
@@ -232,6 +277,25 @@ export function NodeExpanded({ node }) {
       <div className="ne-header">
         <span className="theme-dot" style={{ background: stageInfo.border }} />
         <span className="ne-title">{node.title}</span>
+        {node.code && (
+          <>
+            <button
+              className="ne-whatelse-btn"
+              onClick={() => whatElse(node.id)}
+              disabled={node.loading}
+              title="Explore a completely different approach"
+            >
+              What else?
+            </button>
+            <button
+              className="ne-keepchange-toggle"
+              onClick={() => setShowKeepChange(!showKeepChange)}
+              title="Keep some parts, change others"
+            >
+              Keep/Change
+            </button>
+          </>
+        )}
         {node.code && (
           <button
             className={`ne-code-toggle ${showCode ? 'active' : ''}`}
@@ -262,6 +326,39 @@ export function NodeExpanded({ node }) {
         </div>
       )}
 
+      {/* Keep/Change panel */}
+      {showKeepChange && (
+        <div className="ne-keepchange">
+          <div className="ne-keepchange-field">
+            <label>Keep</label>
+            <input
+              type="text"
+              placeholder="e.g. the layout and color scheme"
+              value={keepText}
+              onChange={e => setKeepText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleKeepChangeSubmit()}
+            />
+          </div>
+          <div className="ne-keepchange-field">
+            <label>Change</label>
+            <input
+              type="text"
+              placeholder="e.g. make the feedback more visual"
+              value={changeText}
+              onChange={e => setChangeText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleKeepChangeSubmit()}
+            />
+          </div>
+          <button
+            className="ne-send ne-keepchange-send"
+            onClick={handleKeepChangeSubmit}
+            disabled={(!keepText.trim() && !changeText.trim()) || node.loading}
+          >
+            Update
+          </button>
+        </div>
+      )}
+
       {/* Main content area */}
       <div className="ne-main">
         {/* Prompt bar */}
@@ -276,11 +373,27 @@ export function NodeExpanded({ node }) {
             rows={2}
           />
           <button
+            className="ne-ask"
+            onClick={handleAskQuestions}
+            disabled={node.loading || !node.prompt.trim()}
+            title="Ask me clarifying questions first"
+          >
+            ?
+          </button>
+          <button
+            className="ne-explore"
+            onClick={handleExplore}
+            disabled={node.loading || !node.prompt.trim()}
+            title="Generate 3 different variations as sibling nodes"
+          >
+            Explore variations
+          </button>
+          <button
             className="ne-send"
             onClick={handleSend}
             disabled={node.loading || !node.prompt.trim()}
           >
-            {node.loading ? '...' : '⏎'}
+            {node.loading ? '...' : 'Generate'}
           </button>
         </div>
 
@@ -313,6 +426,12 @@ export function NodeExpanded({ node }) {
         {/* Output */}
         <div className="ne-output">
           {iframeError && <div className="ne-error">{iframeError}</div>}
+          {showResponseText && (
+            <div className="ne-response-text">
+              {node.response}
+              <div className="ne-response-hint">Add your answers to the prompt above, then click Generate</div>
+            </div>
+          )}
           {iframeHtml ? (
             <iframe
               ref={iframeRef}
@@ -321,7 +440,7 @@ export function NodeExpanded({ node }) {
               srcDoc={iframeHtml}
               title="prototype"
             />
-          ) : !node.loading ? (
+          ) : !node.loading && !showResponseText ? (
             <div className="ne-empty">
               <div className="ne-empty-icon">○</div>
               <div>Describe what you want to see, then press the button</div>

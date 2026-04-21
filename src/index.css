@@ -360,6 +360,93 @@ body {
 .ne-send:active { transform: translateY(0); }
 .ne-send:disabled { opacity: 0.3; cursor: default; transform: none; }
 
+/* "?" Ask questions button */
+.ne-ask {
+  padding: 10px 14px; font-size: 16px;
+  border: 1px solid var(--accent); border-radius: var(--radius-sm);
+  background: var(--bg-primary); color: var(--accent);
+  cursor: pointer; font-family: var(--font); font-weight: 700;
+  transition: all var(--transition);
+  flex-shrink: 0; line-height: 1.4;
+}
+.ne-ask:hover { background: var(--accent-light); transform: translateY(-1px); }
+.ne-ask:active { transform: translateY(0); }
+.ne-ask:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+/* Explore variations button */
+.ne-explore {
+  padding: 10px 14px; font-size: 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-primary); color: var(--text-secondary);
+  cursor: pointer; font-family: var(--font); font-weight: 600;
+  transition: all var(--transition);
+  flex-shrink: 0; line-height: 1.4;
+}
+.ne-explore:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
+.ne-explore:active { transform: translateY(0); }
+.ne-explore:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+/* "What else?" header button */
+.ne-whatelse-btn {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-tertiary);
+  padding: 2px 10px; cursor: pointer; font-family: var(--font); font-weight: 600;
+  transition: all var(--transition); white-space: nowrap;
+}
+.ne-whatelse-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+.ne-whatelse-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Keep/Change toggle button */
+.ne-keepchange-toggle {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-tertiary);
+  padding: 2px 10px; cursor: pointer; font-family: var(--font); font-weight: 600;
+  transition: all var(--transition); white-space: nowrap;
+}
+.ne-keepchange-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+
+/* Keep/Change panel */
+.ne-keepchange {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  animation: panel-slide-in 0.2s ease both;
+}
+.ne-keepchange-field {
+  display: flex; align-items: center; gap: 8px;
+}
+.ne-keepchange-field label {
+  font-size: 14px; font-weight: 700; color: var(--text-secondary); min-width: 60px;
+}
+.ne-keepchange-field input {
+  flex: 1; font-size: 14px; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font); outline: none; color: var(--text-primary);
+  transition: border-color var(--transition);
+}
+.ne-keepchange-field input:focus { border-color: var(--accent); }
+.ne-keepchange-field input::placeholder { color: var(--text-tertiary); }
+.ne-keepchange-send {
+  align-self: flex-end;
+  font-size: 14px !important; padding: 7px 18px !important;
+}
+
+/* Response text (shown when AI responds with text, not code) */
+.ne-response-text {
+  padding: 16px; font-size: 15px; line-height: 1.7;
+  color: var(--text-primary); white-space: pre-wrap;
+  overflow-y: auto; flex: 1;
+}
+.ne-response-hint {
+  margin-top: 16px; padding: 10px 12px;
+  background: var(--accent-light); color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600;
+  white-space: normal;
+}
+
 /* Loading ribbon */
 .ne-loading {
   position: relative;
@@ -639,3 +726,144 @@ body {
 }
 .model-upload-submit:hover { opacity: 0.85; }
 .model-upload-submit:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- Sensor picker ---------- */
+.sensor-picker-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+}
+.sensor-picker {
+  background: var(--bg-primary); border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  width: 620px; max-width: 94vw; max-height: 86vh;
+  display: flex; flex-direction: column;
+}
+.sensor-picker-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  font-size: 17px; font-weight: 700;
+}
+.sensor-picker-close {
+  background: transparent; border: none; font-size: 22px;
+  color: var(--text-tertiary); cursor: pointer; padding: 0 6px; line-height: 1;
+}
+.sensor-picker-close:hover { color: var(--text-primary); }
+.sensor-picker-body {
+  padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+.sensor-picker-help {
+  font-size: 14px; color: var(--text-secondary); line-height: 1.5;
+}
+.sensor-picker-device {
+  font-size: 14px; color: var(--text-primary); line-height: 1.5;
+}
+.sensor-picker-error {
+  font-size: 14px; padding: 10px 12px;
+  background: #FEF2F2; color: #DC2626;
+  border-radius: var(--radius-sm); border: 1px solid #FECACA;
+  line-height: 1.5;
+}
+.sensor-picker-error code {
+  font-size: 13px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px;
+}
+.sensor-picker-primary {
+  font-size: 15px; padding: 9px 18px;
+  border: 1px solid var(--accent); background: var(--accent); color: white;
+  border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font);
+  align-self: flex-start;
+}
+.sensor-picker-primary:hover { opacity: 0.88; }
+.sensor-picker-primary:disabled { opacity: 0.4; cursor: default; }
+
+.sensor-picker-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 46vh; overflow-y: auto;
+  padding-right: 4px;
+}
+.sensor-char-row {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; cursor: pointer; background: var(--bg-primary);
+  transition: border-color var(--transition), background var(--transition);
+}
+.sensor-char-row:hover { border-color: var(--accent-light); }
+.sensor-char-row.selected {
+  border-color: var(--accent); background: var(--accent-light);
+}
+.sensor-char-head {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; margin-bottom: 6px;
+}
+.sensor-char-service { font-weight: 700; color: var(--text-primary); }
+.sensor-char-uuid {
+  font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-tertiary);
+}
+.sensor-char-pulse {
+  margin-left: auto; color: #10B981; font-size: 12px;
+  animation: gentle-pulse 1.5s ease-in-out infinite;
+}
+.sensor-char-data {
+  font-size: 13px; color: var(--text-secondary);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.sensor-char-data .label {
+  display: inline-block; width: 54px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.sensor-char-data .mono {
+  font-family: ui-monospace, monospace; font-size: 12px;
+  word-break: break-all;
+}
+.sensor-char-parser {
+  font-family: var(--font); font-size: 12px;
+  padding: 2px 6px; margin-right: 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-primary); color: var(--text-primary);
+  cursor: pointer;
+}
+.sensor-char-primary {
+  color: var(--accent); font-weight: 600;
+}
+.sensor-char-ai-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-light);
+}
+.sensor-char-ai-btn {
+  font-size: 12px; padding: 4px 10px;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  border-radius: 6px; cursor: pointer; font-family: var(--font); font-weight: 600;
+}
+.sensor-char-ai-btn:hover:not(:disabled) { background: var(--accent-light); }
+.sensor-char-ai-btn:disabled { opacity: 0.4; cursor: default; }
+.sensor-char-ai-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+.sensor-char-ai-error { font-size: 12px; color: #DC2626; }
+.sensor-char-waiting { color: var(--text-tertiary); font-style: italic; }
+.sensor-char-age { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+.sensor-picker-name {
+  display: flex; flex-direction: column; gap: 5px;
+  padding-top: 6px; border-top: 1px dashed var(--border-light);
+}
+.sensor-picker-name label {
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+}
+.sensor-picker-name input {
+  font-size: 15px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font); outline: none; color: var(--text-primary);
+}
+.sensor-picker-name input:focus { border-color: var(--accent); }
+
+.sensor-picker-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 8px;
+}
+.sensor-picker-actions button {
+  font-size: 15px; padding: 8px 18px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-primary); color: var(--text-primary);
+  cursor: pointer; font-family: var(--font);
+}
+.sensor-picker-actions button:hover { background: var(--bg-tertiary); }

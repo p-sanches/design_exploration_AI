@@ -1,23 +1,17 @@
 const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
 
 export async function sendAnthropic(messages, systemPrompt, callbacks) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    callbacks.onError('VITE_ANTHROPIC_API_KEY not set in .env');
-    return;
-  }
-
   const userAssistantMsgs = messages.filter(m => m.role !== 'system');
 
+  const headers = { 'Content-Type': 'application/json' };
+  // If a workshop code is baked into the build, send it so the proxy accepts us.
+  const workshopCode = import.meta.env.VITE_WORKSHOP_CODE;
+  if (workshopCode) headers['X-Workshop-Code'] = workshopCode;
+
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/claude', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers,
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: 16384,
@@ -28,7 +22,7 @@ export async function sendAnthropic(messages, systemPrompt, callbacks) {
     });
 
     if (!res.ok) {
-      callbacks.onError(`Anthropic API error ${res.status}: ${await res.text()}`);
+      callbacks.onError(`Claude proxy error ${res.status}: ${await res.text()}`);
       return;
     }
 
@@ -57,14 +51,12 @@ export async function sendAnthropic(messages, systemPrompt, callbacks) {
       if (done) break;
       buf += decoder.decode(value, { stream: true });
 
-      // Process all complete lines, keep incomplete tail in buf
       const lastNewline = buf.lastIndexOf('\n');
       if (lastNewline !== -1) {
         processLines(buf.slice(0, lastNewline));
         buf = buf.slice(lastNewline + 1);
       }
     }
-    // Flush remaining buffer
     if (buf.trim()) processLines(buf);
 
     callbacks.onDone();

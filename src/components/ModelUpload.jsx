@@ -70,7 +70,7 @@ export function ModelUpload({ onClose }) {
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="e.g. knee-classifier"
+              placeholder="e.g. my-classifier"
             />
           </div>
 
@@ -90,7 +90,7 @@ export function ModelUpload({ onClose }) {
               type="text"
               value={inputDescription}
               onChange={e => setInputDescription(e.target.value)}
-              placeholder="e.g. 33 joints x,y,z = 99 features"
+              placeholder="e.g. 6 sensor values or 99 features"
             />
           </div>
 
